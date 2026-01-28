@@ -28,7 +28,8 @@ export const storefront = {
     // 1. Get All Products
     getProducts: async () => {
         const response = await api.get('/products');
-        return response.data.data; // Handles the Laravel pagination wrapper
+        // This 'data.data' matches the ['data' => ...] we just added in the controller
+        return response.data.data; 
     },
 
     // 2. Get Single Product

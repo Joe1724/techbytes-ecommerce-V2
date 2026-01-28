@@ -1,117 +1,193 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import { axiosInstance as api } from '../api/storefront';
 
 export default function EditProduct() {
-    const { id } = useParams();
+    const { id } = useParams(); // Get ID from URL
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [imagePreview, setImagePreview] = useState(null);
     
     const [formData, setFormData] = useState({
         name: '',
-        slug: '',
-        description: '',
         price: '',
         stock: '',
-        image_url: ''
+        category: '',
+        description: '',
+        is_featured: false,
+        image: null 
     });
 
-    const [loading, setLoading] = useState(true);
-
+    // 1. Load Existing Data
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                // Fetch all products and find the one with the matching ID
-                const res = await axios.get('http://127.0.0.1:8000/api/products');
-                const product = res.data.data.find(p => p.id == id);
+                // Determine if we are using an ID or a Slug
+                const response = await api.get(`/products/${id}`);
                 
-                if (product) {
-                    setFormData({
-                        name: product.name,
-                        slug: product.slug,
-                        description: product.description,
-                        price: product.price,
-                        stock: product.stock,
-                        image_url: product.image_url
-                    });
-                    setLoading(false);
-                } else {
-                    alert("Product not found");
-                    navigate('/admin');
-                }
+                // FIX: Check if the data is wrapped in a "data" property or comes raw
+                const product = response.data.data ? response.data.data : response.data;
+                
+                setFormData({
+                    name: product.name,
+                    price: product.price,
+                    stock: product.stock,
+                    category: product.category,
+                    description: product.description,
+                    // Handle all truthy values for the checkbox (1, "1", true)
+                    is_featured: product.is_featured === 1 || product.is_featured === true || product.is_featured === "1",
+                    image: null // Keep null unless user selects NEW file
+                });
+                
+                setImagePreview(product.image_url); // Show current image
+                setLoading(false);
             } catch (error) {
-                console.error(error);
-                alert("Error fetching product data");
+                console.error("Failed to fetch product", error);
+                alert("Product not found or failed to load.");
+                navigate('/admin/products');
             }
         };
-
         fetchProduct();
     }, [id, navigate]);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData(prev => ({ ...prev, image: file }));
+            setImagePreview(URL.createObjectURL(file));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('token');
+        setLoading(true);
+
+        const data = new FormData();
+        // TRICK: Laravel needs POST to handle files, but we spoof PUT
+        data.append('_method', 'PUT'); 
+        
+        data.append('name', formData.name);
+        data.append('price', formData.price);
+        data.append('stock', formData.stock);
+        data.append('category', formData.category);
+        data.append('description', formData.description);
+        data.append('is_featured', formData.is_featured ? 1 : 0);
+        
+        if (formData.image) {
+            data.append('image', formData.image);
+        }
 
         try {
-            await axios.put(`http://127.0.0.1:8000/api/products/${id}`, formData, {
-                headers: { Authorization: `Bearer ${token}` }
+            await api.post(`/products/${id}`, data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
             alert('Product Updated Successfully!');
-            navigate('/admin');
+            navigate('/admin/products');
         } catch (error) {
-            console.error(error);
-            alert('Failed to update product.');
+            console.error("Failed to update product", error);
+            alert("Error updating product.");
+        } finally {
+            setLoading(false);
         }
     };
 
-    if (loading) return <div className="text-center mt-20 text-gray-400">Loading product data...</div>;
-
-    // Shared Tailwind Classes
-    const inputClass = "w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-orange-500 transition";
-    const labelClass = "block text-gray-400 mb-2 text-sm font-bold";
+    if (loading) return <div className="text-white">Loading Product Data...</div>;
 
     return (
-        <div className="max-w-2xl mx-auto mt-10 bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
-            <h2 className="text-3xl font-bold text-white mb-6 border-b border-gray-700 pb-4">Edit Product #{id}</h2>
-            
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-w-4xl mx-auto">
+            <h1 className="mb-8 text-3xl font-bold text-white">Edit Product</h1>
+
+            <form onSubmit={handleSubmit} className="p-8 space-y-6 bg-gray-800 border border-gray-700 shadow-xl rounded-xl">
                 
-                <div className="md:col-span-2">
-                    <label className={labelClass}>Product Name</label>
-                    <input name="name" value={formData.name} onChange={handleChange} required className={inputClass} />
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                        <label className="block mb-2 text-sm font-bold text-gray-400">Product Name</label>
+                        <input 
+                            type="text" name="name" required value={formData.name}
+                            className="w-full px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-bold text-gray-400">Category</label>
+                        <select 
+                            name="category" required value={formData.category}
+                            className="w-full px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
+                            onChange={handleChange}
+                        >
+                            <option value="laptops">Laptops</option>
+                            <option value="keyboards">Keyboards</option>
+                            <option value="headphones">Headphones</option>
+                            <option value="monitors">Monitors</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <div>
+                        <label className="block mb-2 text-sm font-bold text-gray-400">Price ($)</label>
+                        <input 
+                            type="number" name="price" required step="0.01" value={formData.price}
+                            className="w-full px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
+                            onChange={handleChange}
+                        />
+                    </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-bold text-gray-400">Stock Quantity</label>
+                        <input 
+                            type="number" name="stock" required value={formData.stock}
+                            className="w-full px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
+                            onChange={handleChange}
+                        />
+                    </div>
                 </div>
 
                 <div>
-                    <label className={labelClass}>Slug (URL)</label>
-                    <input name="slug" value={formData.slug} onChange={handleChange} required className={inputClass} />
-                </div>
-                <div>
-                    <label className={labelClass}>Price ($)</label>
-                    <input name="price" type="number" step="0.01" value={formData.price} onChange={handleChange} required className={inputClass} />
-                </div>
-
-                <div>
-                    <label className={labelClass}>Stock Quantity</label>
-                    <input name="stock" type="number" value={formData.stock} onChange={handleChange} required className={inputClass} />
-                </div>
-                <div>
-                    <label className={labelClass}>Image URL</label>
-                    <input name="image_url" value={formData.image_url} onChange={handleChange} required className={inputClass} />
+                    <label className="block mb-2 text-sm font-bold text-gray-400">Description</label>
+                    <textarea 
+                        name="description" required rows="4" value={formData.description}
+                        className="w-full px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500"
+                        onChange={handleChange}
+                    ></textarea>
                 </div>
 
-                <div className="md:col-span-2">
-                    <label className={labelClass}>Description</label>
-                    <textarea name="description" value={formData.description} onChange={handleChange} required className={`${inputClass} h-32`} />
+                {/* Image Section */}
+                <div className="relative flex flex-col items-center justify-center p-6 transition border-2 border-gray-600 border-dashed cursor-pointer rounded-xl bg-gray-900/50 hover:border-blue-500">
+                    <input 
+                        type="file" accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={handleImageChange}
+                    />
+                    
+                    <div className="text-center">
+                        <img src={imagePreview} alt="Preview" className="object-contain h-48 mx-auto mb-4 rounded-lg" />
+                        <p className="text-sm text-blue-400">Click to replace image (optional)</p>
+                    </div>
                 </div>
 
-                <div className="md:col-span-2">
-                    <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-black font-bold py-3 rounded-lg transition duration-200 shadow-lg">
-                        Update Product
-                    </button>
+                <div className="flex items-center gap-3">
+                    <input 
+                        type="checkbox" name="is_featured" id="featured" checked={formData.is_featured}
+                        className="w-5 h-5 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500 focus:ring-offset-gray-800"
+                        onChange={handleChange}
+                    />
+                    <label htmlFor="featured" className="text-white cursor-pointer select-none">Mark as Featured</label>
                 </div>
+
+                <button 
+                    type="submit" disabled={loading}
+                    className="w-full py-4 font-bold text-white transition transform shadow-lg bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 rounded-xl active:scale-95 disabled:opacity-50"
+                >
+                    {loading ? 'Updating...' : 'Update Product'}
+                </button>
             </form>
         </div>
     );

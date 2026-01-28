@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import storefront from '../api/storefront';
+// Import the default helper (for loading) AND the raw api instance (for deleting)
+import storefront, { axiosInstance as api } from '../api/storefront';
 
 export default function AdminProducts() {
     const [products, setProducts] = useState([]);
@@ -21,9 +22,22 @@ export default function AdminProducts() {
         }
     };
 
+    // UPDATED: Now performs actual deletion via API
     const handleDelete = async (id) => {
-        if(!window.confirm("Are you sure you want to delete this product?")) return;
-        alert("Delete function coming soon!");
+        if(!window.confirm("Are you sure you want to delete this product? This action cannot be undone.")) return;
+
+        try {
+            // 1. Send DELETE request to Backend
+            await api.delete(`/products/${id}`);
+            
+            // 2. Remove from UI immediately (Optimistic Update)
+            setProducts(products.filter(product => product.id !== id));
+            
+            alert("Product deleted successfully.");
+        } catch (error) {
+            console.error("Failed to delete product", error);
+            alert("Failed to delete. Check console.");
+        }
     };
 
     if (loading) return <div className="text-white">Loading Inventory...</div>;
