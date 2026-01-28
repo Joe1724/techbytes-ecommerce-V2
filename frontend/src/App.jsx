@@ -1,33 +1,74 @@
-import { Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout'; // Import the new layout
+import { useContext } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AuthContext } from './context/AuthContext';
 
-// Import Pages
+// Layouts
+import Layout from './components/Layout';
+import AdminLayout from './components/AdminLayout';
+
+// Pages
 import Login from './pages/Login';
 import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
-import Admin from './pages/Admin';
+import AdminProducts from './pages/AdminProducts'; // <--- NEW IMPORT
+import AdminDashboard from './pages/AdminDashboard';
 import CreateProduct from './pages/CreateProduct';
 import EditProduct from './pages/EditProduct';
 import Shop from './pages/Shop';
 
 function App() {
+  const { user } = useContext(AuthContext);
+
+  // Helper: Only allow if user is logged in AND is 'admin'
+  const ProtectedAdminRoute = ({ children }) => {
+      if (!user) return <Navigate to="/login" />;
+      if (user.role !== 'admin') return <Navigate to="/" />; // Kick normal users to Home
+      return children;
+  };
+
   return (
-    // Wrap everything in the Layout
-    <Layout>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/product/:slug" element={<ProductDetails />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/orders" element={<Orders />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/admin/create" element={<CreateProduct />} />
-        <Route path="/admin/edit/:id" element={<EditProduct />} />
-        <Route path="/shop" element={<Shop />} />
+        {/* PUBLIC ROUTES */}
+        <Route path="/" element={<Layout><Home /></Layout>} />
+        <Route path="/shop" element={<Layout><Shop /></Layout>} />
+        <Route path="/product/:slug" element={<Layout><ProductDetails /></Layout>} />
+        <Route path="/cart" element={<Layout><Cart /></Layout>} />
+        <Route path="/orders" element={<Layout><Orders /></Layout>} />
+        <Route path="/login" element={<Layout><Login /></Layout>} />
+        <Route path="/register" element={<Layout><h2>Register Page</h2></Layout>} />
+
+        {/* SECURE ADMIN ROUTES */}
+        <Route path="/admin/dashboard" element={
+            <ProtectedAdminRoute>
+                <AdminLayout><AdminDashboard /></AdminLayout>
+            </ProtectedAdminRoute>
+        } />
+        
+        {/* UPDATED: Uses the new AdminProducts Table */}
+        <Route path="/admin/products" element={
+            <ProtectedAdminRoute>
+                <AdminLayout><AdminProducts /></AdminLayout>
+            </ProtectedAdminRoute>
+        } />
+        
+        <Route path="/admin/create" element={
+            <ProtectedAdminRoute>
+                <AdminLayout><CreateProduct /></AdminLayout>
+            </ProtectedAdminRoute>
+        } />
+        
+        <Route path="/admin/edit/:id" element={
+            <ProtectedAdminRoute>
+                <AdminLayout><EditProduct /></AdminLayout>
+            </ProtectedAdminRoute>
+        } />
+
+        {/* Redirect old /admin to dashboard */}
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+
       </Routes>
-    </Layout>
   );
 }
 

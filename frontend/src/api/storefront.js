@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_URL = 'http://127.0.0.1:8000/api';
 
-// Create a configured axios instance (optional, but good practice)
+// 1. Create the Axios Instance
 const api = axios.create({
     baseURL: API_URL,
     headers: {
@@ -11,7 +11,7 @@ const api = axios.create({
     }
 });
 
-// Add the token to every request automatically
+// 2. Add the token interceptor (Keeps your auth working automatically)
 api.interceptors.request.use(config => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -20,6 +20,10 @@ api.interceptors.request.use(config => {
     return config;
 });
 
+// 3. EXPORT THE INSTANCE (This fixes the "reading 'headers' of undefined" error)
+export const axiosInstance = api;
+
+// 4. Your existing Storefront Helper Functions
 export const storefront = {
     // 1. Get All Products
     getProducts: async () => {
@@ -57,22 +61,20 @@ export const storefront = {
         return response.data;
     },
     
+    // 7. Get Featured (Trending)
     getFeaturedProducts: async () => {
         const response = await api.get('/products/trending');
-        
-        // CORRECT:
         return response.data; 
-
-        // INCORRECT (Delete this if you have it):
-        // return response.data.data; 
     },
 
     // 8. Get On Sale Products (For Timer)
     getOnSaleProducts: async () => {
         const response = await api.get('/products/on-sale');
         return response.data;
-    }
-
+    },
+    
+    // 9. Generic GET helper (useful if you need it elsewhere)
+    get: (url) => api.get(url),
 };
 
 export default storefront;
