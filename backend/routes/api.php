@@ -6,7 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
-// use App\Http\Controllers\Api\StorefrontController; // Optional: Uncomment if you created this specific controller
+use App\Http\Controllers\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,23 +15,14 @@ use App\Http\Controllers\OrderController;
 */
 
 // ==========================================
-// 1. PUBLIC ROUTES (Anyone can access)
+// 1. PUBLIC ROUTES
 // ==========================================
-
-// Auth
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Storefront & Products
-// CRITICAL: Specific routes must go BEFORE the /{slug} wildcard
 Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/trending', [ProductController::class, 'featured']); // "Top Picks"
-Route::get('/products/on-sale', [ProductController::class, 'onSale']);    // "Flash Sale"
-
-// Optional Storefront index (Uncomment if you built the StorefrontController)
-// Route::get('/storefront', [StorefrontController::class, 'index']);
-
-// Product Details (Wildcard - Catches everything else)
+Route::get('/products/trending', [ProductController::class, 'featured']);
+Route::get('/products/on-sale', [ProductController::class, 'onSale']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
 
 
@@ -50,16 +41,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/cart', [CartController::class, 'store']);
     Route::delete('/cart/{id}', [CartController::class, 'destroy']);
 
-    // Order Routes
+    // Customer Order Routes
     Route::post('/checkout', [OrderController::class, 'checkout']);
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
 
     // ==========================================
-    // 3. ADMIN ROUTES (Manage Inventory)
+    // 3. ADMIN ROUTES (Inventory & Order Mgmt)
     // ==========================================
-    Route::post('/products', [ProductController::class, 'store']);      // Create
-    Route::put('/products/{id}', [ProductController::class, 'update']); // Edit
+    Route::post('/products', [ProductController::class, 'store']);       // Create
+    Route::put('/products/{id}', [ProductController::class, 'update']);  // Edit
     Route::delete('/products/{id}', [ProductController::class, 'destroy']); // Delete
+
+    Route::get('/admin/stats', [AdminController::class, 'stats']);       // Stats
+
+    // --- NEW: Admin Order Management Routes ---
+    Route::get('/admin/orders', [AdminController::class, 'getOrders']);
+    Route::put('/admin/orders/{id}', [AdminController::class, 'updateOrderStatus']);
 
 });

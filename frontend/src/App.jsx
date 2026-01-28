@@ -12,11 +12,12 @@ import Home from './pages/Home';
 import ProductDetails from './pages/ProductDetails';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
-import AdminProducts from './pages/AdminProducts'; // <--- NEW IMPORT
+import AdminProducts from './pages/AdminProducts'; 
 import AdminDashboard from './pages/AdminDashboard';
 import CreateProduct from './pages/CreateProduct';
 import EditProduct from './pages/EditProduct';
 import Shop from './pages/Shop';
+import AdminOrders from './pages/AdminOrders'; // <--- Import is here
 
 function App() {
   const { user } = useContext(AuthContext);
@@ -46,7 +47,6 @@ function App() {
             </ProtectedAdminRoute>
         } />
         
-        {/* UPDATED: Uses the new AdminProducts Table */}
         <Route path="/admin/products" element={
             <ProtectedAdminRoute>
                 <AdminLayout><AdminProducts /></AdminLayout>
@@ -62,6 +62,13 @@ function App() {
         <Route path="/admin/edit/:id" element={
             <ProtectedAdminRoute>
                 <AdminLayout><EditProduct /></AdminLayout>
+            </ProtectedAdminRoute>
+        } />
+
+        {/* NEW: Admin Orders Route */}
+        <Route path="/admin/orders" element={
+            <ProtectedAdminRoute>
+                <AdminLayout><AdminOrders /></AdminLayout>
             </ProtectedAdminRoute>
         } />
 

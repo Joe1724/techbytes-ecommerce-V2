@@ -1,52 +1,105 @@
+import { useEffect, useState } from 'react';
+import { axiosInstance as api } from '../api/storefront';
+
 export default function AdminDashboard() {
+    const [stats, setStats] = useState({
+        revenue: 0,
+        orders: 0,
+        products: 0,
+        customers: 0,
+        low_stock: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await api.get('/admin/stats');
+                setStats(response.data);
+                setLoading(false);
+            } catch (error) {
+                console.error("Failed to load stats", error);
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    if (loading) return <div className="text-white">Loading Dashboard...</div>;
+
     return (
         <div>
             <h1 className="mb-8 text-3xl font-bold text-white">Dashboard Overview</h1>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Total Revenue" value="$12,450" color="green" />
-                <StatCard title="Total Orders" value="156" color="blue" />
-                <StatCard title="Products in Stock" value="64" color="purple" />
-                <StatCard title="Pending Orders" value="12" color="orange" />
-            </div>
+                
+                {/* 1. Total Revenue */}
+                <div className="p-6 bg-gray-800 border border-gray-700 shadow-lg rounded-xl">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-400">Total Revenue</p>
+                            <h3 className="mt-1 text-2xl font-bold text-white">
+                                ${Number(stats.revenue).toLocaleString()}
+                            </h3>
+                        </div>
+                        <div className="p-2 rounded-lg bg-green-500/10">
+                            <span className="text-xl text-green-400">💰</span>
+                        </div>
+                    </div>
+                </div>
 
-            {/* Recent Activity Section */}
-            <div className="p-6 bg-gray-800 border border-gray-700 rounded-xl">
-                <h2 className="mb-4 text-xl font-bold text-white">Recent Activity</h2>
-                <div className="space-y-4">
-                    <ActivityItem text="Order #1024 placed by John Doe" time="2 mins ago" />
-                    <ActivityItem text="New User Registered: Sarah Smith" time="1 hour ago" />
-                    <ActivityItem text="Zephyrus G14 Stock Update (Low Stock)" time="3 hours ago" />
-                    <ActivityItem text="Order #1023 Shipped" time="5 hours ago" />
+                {/* 2. Total Orders */}
+                <div className="p-6 bg-gray-800 border border-gray-700 shadow-lg rounded-xl">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-400">Total Orders</p>
+                            <h3 className="mt-1 text-2xl font-bold text-white">{stats.orders}</h3>
+                        </div>
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                            <span className="text-xl text-blue-400">📦</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Products In Stock */}
+                <div className="p-6 bg-gray-800 border border-gray-700 shadow-lg rounded-xl">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-400">Total Products</p>
+                            <h3 className="mt-1 text-2xl font-bold text-white">{stats.products}</h3>
+                        </div>
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                            <span className="text-xl text-purple-400">🎮</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Customers */}
+                <div className="p-6 bg-gray-800 border border-gray-700 shadow-lg rounded-xl">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-gray-400">Active Customers</p>
+                            <h3 className="mt-1 text-2xl font-bold text-white">{stats.customers}</h3>
+                        </div>
+                        <div className="p-2 rounded-lg bg-orange-500/10">
+                            <span className="text-xl text-orange-400">👥</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-}
 
-// Simple Helper Components for Layout
-function StatCard({ title, value, color }) {
-    const colors = {
-        green: "bg-green-500/10 text-green-400 border-green-500/20",
-        blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-        purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-        orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-    };
-
-    return (
-        <div className={`p-6 rounded-xl border ${colors[color]} shadow-lg`}>
-            <h3 className="text-sm font-medium tracking-wider text-gray-400 uppercase">{title}</h3>
-            <p className="mt-2 text-3xl font-bold">{value}</p>
-        </div>
-    );
-}
-
-function ActivityItem({ text, time }) {
-    return (
-        <div className="flex items-center justify-between pb-3 border-b border-gray-700 last:border-0 last:pb-0">
-            <p className="text-gray-300">{text}</p>
-            <span className="text-xs text-gray-500">{time}</span>
+            {/* Low Stock Alert */}
+            {stats.low_stock > 0 && (
+                <div className="flex items-center gap-3 p-4 mb-8 border bg-red-500/10 border-red-500/50 rounded-xl">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                        <h4 className="font-bold text-red-400">Low Stock Alert</h4>
+                        <p className="text-sm text-gray-400">You have {stats.low_stock} items with less than 10 units in stock. Check inventory.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
